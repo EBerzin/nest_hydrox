@@ -10,8 +10,8 @@ bool PrintSubThr = true;
 // include or exclude the infamous negative S1 & S2 pulses (and 0's)
 
 // General parameters of importance changing the global behavior
-bool MCtruthE = false;    // false means reconstructed energy
-bool MCtruthPos = false;  // false means reconstructed position
+bool MCtruthE = true;    // false means reconstructed energy
+bool MCtruthPos = true;  // false means reconstructed position
 
 // Setting the S1 and S2 calculation modes
 NEST::S1CalculationMode s1CalculationMode = NEST::S1CalculationMode::Hybrid;

@@ -754,6 +754,54 @@ YieldResult NESTcalc::GetYieldNROld(
   return YieldResultValidity(result, energy, W_DEFAULT);
 }
 
+YieldResult NESTcalc::GetYieldH(double energy, double density, double dfield,
+                                 double massNum,
+                                 const std::vector<double> &NRYieldsParam) {
+    //double NexONi = 0.17; // ER like
+	  double NexONi = 0.482; // NR like
+	  //double TIB = 0.002852; //to be passed into NphNe function to calculate recombination
+	  double TIB = 0.10077*pow(dfield,-0.078314); //NR like [ANALOGOUS TO EQUATION 9 FROM PAPER]
+	  double alf = 1./(1.+NexONi);
+	  double fita = -3057;
+	  double fitb = 0.04701;
+	  double fitc = 5.8797e5;
+	  double fitd = 1.0026;
+	  double fite = 25.0143;
+
+    //cout << "DENSITY! " << density << endl;
+    Wvalue wvalue = WorkFunction(density, fdetector->get_molarMass(),
+                               fdetector->get_OldW13eV());
+    double Wq_eV = wvalue.Wq_eV;
+    double W = Wq_eV * 1e-3;
+    //cout << W << endl;
+    //cout << fdetector->get_OldW13eV() << endl;
+    
+	  double lindhard_factor = fitd + (fita - fitd)/pow(1 + pow(energy/fitc,fitb),fite); //NEST 2.0
+	  //double lindhard_factor = 0.571*pow(energy, 0.1173); //SRIM
+	  //double lindhard_factor = 0.9403*pow(energy, 0.01735); //TRIM
+    double numIons = (energy/W)*lindhard_factor;
+    double numExcitons = (energy/W)*lindhard_factor*NexONi*alf;
+	  //numIons = modPoisRnd((energy/W)*lindhard_factor*alf,1);
+	  //numExcitons = modPoisRnd((energy/W)*lindhard_factor*NexONi*alf,1);
+	  double numQuanta = numIons+numExcitons;
+
+    double r = 1 - log(numIons * TIB / 4 + 1) / (numIons * TIB / 4);
+    double Nph = numExcitons + r * numIons;
+    double Ne = (1 - r) * numIons;
+
+	  //cout << NexONi << ” ” << alf << ” ” << lindhard_factor << ” “<< TIB << endl;
+    YieldResult result{};
+    result.PhotonYield = Nph;
+    result.ElectronYield = Ne;
+    result.ExcitonRatio = NexONi;
+    result.Lindhard = lindhard_factor;
+    result.ElectricField = dfield;
+    result.DeltaT_Scint = -999;
+    return YieldResultValidity(
+       result, energy, Wq_eV);  // everything needed to calculate fluctuations
+
+}
+
 YieldResult NESTcalc::GetYieldNR(double energy, double density, double dfield,
                                  double massNum,
                                  const std::vector<double> &NRYieldsParam) {
@@ -1221,6 +1269,8 @@ YieldResult NESTcalc::GetYields(INTERACTION_TYPE species, double energy,
       return GetYieldGamma(energy, density,
                            dfield);  // PE of the full gamma spectrum
       break;
+    case H:
+      return GetYieldH(energy, density, dfield, massNum, NRYieldsParam);
     default:  // beta, CH3T, 14C, the pp solar neutrino background, and
               // Compton/PP spectra of fullGamma
       if (ValidityTests::nearlyEqual(ATOM_NUM, 18.) || oldModelER ||

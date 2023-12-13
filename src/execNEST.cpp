@@ -473,6 +473,8 @@ int execNEST(VDetector* detector, uint64_t numEvts, const string& type,
               "interaction, and some "
            << "photons and electrons may go unaccounted." << endl;
     }
+  } else if (type == "H") {
+    type_num = H;
   } else {
     if (verbosity > 0) {
       string particleTypes =
@@ -494,8 +496,9 @@ int execNEST(VDetector* detector, uint64_t numEvts, const string& type,
           "pp or ppSolar with many various underscore, hyphen and "
           "capitalization permutations permitted,\n"
           "atmNu,\n"
-          "muon or MIP or LIP or mu or mu-, and\n"
-          "fullGamma\n";
+          "muon or MIP or LIP or mu or mu-,\n"
+          "fullGamma, and \n"
+          "H\n";
       copy(particleTypes.begin(), particleTypes.end(),
            std::ostream_iterator<char>(cerr, ""));
     }
@@ -1246,7 +1249,6 @@ int execNEST(VDetector* detector, uint64_t numEvts, const string& type,
               "gamma-X i.e. MSSI may be happening. This may be why even high-E "
               "eff is <100%%. Check your cathode position definition.\n\n");
       }
-
       if (PrintSubThr ||
           (scint[0] > PHE_MIN && scint[1] > PHE_MIN && scint[2] > PHE_MIN &&
            scint[3] > PHE_MIN && scint[4] > PHE_MIN && scint[5] > PHE_MIN &&

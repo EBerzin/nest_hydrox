@@ -151,7 +151,8 @@ typedef enum {
   fullGamma = 14,
   fullGamma_PE = 15,
   fullGamma_Compton_PP = 16,
-  NoneType = 17
+  NoneType = 17,
+  H = 18
 
 } INTERACTION_TYPE;
 
@@ -270,6 +271,9 @@ class NESTcalc {
       vector<double> eDriftVelTable,
       const std::vector<double> &NRERWidthsParam);
   // Use dE/dx-based yield models instead of energy-based, as everywhere else
+
+  virtual YieldResult GetYieldH(double energy, double density, double dfield,
+      double massNum, const std::vector<double> &NRYieldsParam);
 
   virtual YieldResult GetYieldNR(
       double energy, double density, double dfield, double massNum,
