@@ -757,6 +757,95 @@ YieldResult NESTcalc::GetYieldNROld(
 YieldResult NESTcalc::GetYieldH(double energy, double density, double dfield,
                                  double massNum,
                                  const std::vector<double> &NRYieldsParam) {
+
+  if (ValidityTests::nearlyEqual(ATOM_NUM, 18.))
+    massNum = fdetector->get_molarMass();
+
+  if (NRYieldsParam.size() < 12) {
+    throw std::runtime_error(
+        "ERROR: You need a minimum of 12 nuisance parameters for the mean "
+        "yields.");
+  }
+  if (energy > HIGH_E_NR)
+    cerr << "\nWARNING: No data out here, you are beyond the AmBe endpoint of "
+            "about 300 keV.\n";
+  int massNumber;
+  double ScaleFactor[2] = {1., 1.};
+  if (ValidityTests::nearlyEqual(massNum, 0.))
+    massNumber = RandomGen::rndm()->SelectRanXeAtom();
+  else {
+    massNumber = int(massNum);
+  }
+  ScaleFactor[0] = sqrt(fdetector->get_molarMass() / (double)massNumber);
+  ScaleFactor[1] = ScaleFactor[0];
+  double Nq = NRYieldsParam[0] * pow(energy, NRYieldsParam[1]);
+
+  // Here, we rescale Nq based on the relative yield expected from H. 
+
+  Nq *= 6.6479 * pow(energy, -0.0766126);
+
+  if (!fdetector->get_OldW13eV()) Nq *= ZurichEXOW;
+  double ThomasImel = NRYieldsParam[2] * pow(dfield, NRYieldsParam[3]) *
+                      pow(density / DENSITY, 0.3);
+  double Qy =
+      1. / (ThomasImel * pow(energy + NRYieldsParam[4], NRYieldsParam[9]));
+  Qy *= 1. - 1. / pow(1. + pow((energy / NRYieldsParam[5]), NRYieldsParam[6]),
+                      NRYieldsParam[10]);
+  if (!fdetector->get_OldW13eV()) Qy *= ZurichEXOQ;
+  double Ly = Nq / energy - Qy;
+  if (Qy < 0.0) Qy = 0.0;
+  if (Ly < 0.0) Ly = 0.0;
+  double Ne = Qy * energy * ScaleFactor[1];
+  double Nph =
+      Ly * energy * ScaleFactor[0] *
+      (1. - 1. / pow(1. + pow((energy / NRYieldsParam[7]), NRYieldsParam[8]),
+                     NRYieldsParam[11]));
+  Nq = Nph + Ne;
+  double Ni = (4. / ThomasImel) * (exp(Ne * ThomasImel / 4.) - 1.);
+  double Nex = (-1. / ThomasImel) *
+               (4. * exp(Ne * ThomasImel / 4.) - (Ne + Nph) * ThomasImel - 4.);
+
+  double NexONi = Nex / Ni;
+  Wvalue wvalue = WorkFunction(density, fdetector->get_molarMass(),
+                               fdetector->get_OldW13eV());
+  if (NexONi < wvalue.alpha && energy > 1e2) {
+    NexONi = wvalue.alpha;
+    Ni = Nq / (1. + NexONi);
+    Nex = Nq - Ni;
+  }
+  if (NexONi > 1.0 && energy < 1.) {
+    NexONi = 1.00;
+    Ni = Nq / (1. + NexONi);
+    Nex = Nq - Ni;
+  }
+
+  if (Nex < 0. && density >= 1.)
+    cerr << "\nCAUTION: You are approaching the border of NEST's validity for "
+            "high-energy (OR, for LOW) NR, or are beyond it, at "
+         << energy << " keV." << endl;
+  if (std::abs(Nex + Ni - Nq) > 2. * PHE_MIN) {
+    throw std::runtime_error(
+        "ERROR: Quanta not conserved. Tell Matthew Immediately!");
+  }
+
+  double Wq_eV = wvalue.Wq_eV;
+  double L = (Nq / energy) * Wq_eV * 1e-3;
+
+  YieldResult result{};
+  result.PhotonYield = Nph;
+  result.ElectronYield = Ne;
+  result.ExcitonRatio = NexONi;
+  result.Lindhard = L;
+  result.ElectricField = dfield;
+  result.DeltaT_Scint = -999;
+  return YieldResultValidity(
+      result, energy, Wq_eV);  // everything needed to calculate fluctuations
+
+}
+
+/* YieldResult NESTcalc::GetYieldH(double energy, double density, double dfield,
+                                 double massNum,
+                                 const std::vector<double> &NRYieldsParam) {
     //double NexONi = 0.17; // ER like
 	  double NexONi = 0.482; // NR like
 	  //double TIB = 0.002852; //to be passed into NphNe function to calculate recombination
@@ -800,7 +889,7 @@ YieldResult NESTcalc::GetYieldH(double energy, double density, double dfield,
     return YieldResultValidity(
        result, energy, Wq_eV);  // everything needed to calculate fluctuations
 
-}
+} */
 
 YieldResult NESTcalc::GetYieldNR(double energy, double density, double dfield,
                                  double massNum,

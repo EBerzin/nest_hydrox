@@ -67,8 +67,8 @@ int main(int argc, char** argv) {
   double wimp_mass_GeV = 1.;
 
   // Choose a possible interaction type
-  INTERACTION_TYPE type_num = NR;
-  //INTERACTION_TYPE type_num = H;
+  //INTERACTION_TYPE type_num = NR;
+  INTERACTION_TYPE type_num = H;
   // INTERACTION_TYPE type_num = WIMP;
   // INTERACTION_TYPE type_num = B8;
   // INTERACTION_TYPE type_num = DD;
